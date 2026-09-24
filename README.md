@@ -6,17 +6,17 @@ Portfolio Analytics Engineer / Data Analyst — Crespino Marius ADJANINYEDO
 
 Ce projet construit un pipeline complet de scoring de risque de crédit à l'échelle
 bancaire : probabilité de défaut (PD), perte en cas de défaut (LGD), exposition
-au moment du défaut (EAD), et perte attendue (Expected Loss, EL) — complété par
+au moment du défaut (EAD), et perte attendue (Expected Loss, EL); complété par
 un stress test simplifié et des recommandations d'octroi par segment de risque.
 
 **Changement de dataset par rapport au cahier des charges initial.** Le German
-Credit Data (UCI, 1 000 lignes) proposé à l'origine a été écarté au profit du
+Credit Data (UCI, 1 000 lignes) choisi à l'origine a été écarté au profit du
 dataset Lending Club (prêts accordés, 2007-2018) pour deux raisons :
 - **Volume** : German Credit Data ne permet pas de démontrer un pipeline à
   l'échelle d'un cas d'usage bancaire réel.
 - **Richesse des variables financières** : contrairement à German Credit Data,
   Lending Club fournit les montants réellement remboursés, les recouvrements et
-  les frais de recouvrement — ce qui permet de calculer une **LGD et une EAD
+  les frais de recouvrement. Ce qui permet de calculer une **LGD et une EAD
   empiriques réelles**, plutôt que de les poser comme hypothèses forfaitaires
   (l'approche que German Credit Data aurait imposée).
 
@@ -24,7 +24,7 @@ dataset Lending Club (prêts accordés, 2007-2018) pour deux raisons :
 
 - **Source** : Kaggle, "All Lending Club loan data" (prêts acceptés, 2007-2018)
 - **Périmètre retenu** : prêts émis entre 2007 et 2017, avec une issue connue
-  (Fully Paid, Charged Off, Default — les prêts encore en cours, "Current",
+  (Fully Paid, Charged Off, Default : les prêts encore en cours, "Current",
   sont exclus). 2018 a été volontairement écarté pour limiter l'effet de
   censure à droite sur les cohortes trop récentes (voir section 5).
 - **Chargement** : le fichier brut pèse ~1,6 Go ; il est lu et filtré par blocs
@@ -33,7 +33,7 @@ dataset Lending Club (prêts accordés, 2007-2018) pour deux raisons :
 - **Volumétrie finale** : **1 289 032 prêts**, taux de défaut global **20,15%**
 - **Cible** : `default = 1` si le prêt est Charged Off ou Default, `0` si Fully Paid
 - **Split train/test** : chronologique (train ≤ 2016, 1 119 711 prêts, défaut
-  19,70% ; test 2017, 169 321 prêts, défaut 23,13%) — un split aléatoire
+  19,70% ; test 2017, 169 321 prêts, défaut 23,13%). un split aléatoire
   aurait été moins réaliste pour un usage en production, où un modèle est
   toujours évalué sur des données futures inconnues à l'entraînement.
 
@@ -60,7 +60,7 @@ Precision, Brier score) :
 
 XGBoost l'emporte sur les trois métriques simultanément et est retenu comme
 modèle final. Random Forest, malgré un AUC comparable à la régression
-logistique, a un Brier score nettement dégradé — effet du paramètre
+logistique, a un Brier score nettement dégradé, un effet du paramètre
 `class_weight="balanced"`, qui améliore la détection de la classe minoritaire
 au prix de la calibration des probabilités.
 
@@ -84,7 +84,7 @@ prêteur.
 Régression quasi-binomiale à lien logit (adaptée à une proportion bornée entre
 0 et 1), calculée uniquement sur les prêts en défaut du jeu de test.
 
-- **Version par grade seul** : pseudo R² de 0,0094 — proche d'une simple
+- **Version par grade seul** : pseudo R² de 0,0094 est proche d'une simple
   moyenne par grade (gain de seulement 0,23% par rapport à cette moyenne
   naïve)
 - **Version enrichie** (ajout du délai avant défaut, de l'ancienneté du
@@ -101,7 +101,7 @@ Deux approches comparées :
   de crédit renouvelable
 - **V2 (approche enrichie, retenue pour les résultats finaux)** : EAD estimée
   par la formule d'amortissement standard, appliquée au délai moyen avant
-  défaut de chaque grade — validée par comparaison à l'EAD empirique observée
+  défaut de chaque grade puis validée par comparaison à l'EAD empirique observée
   sur les prêts en défaut (écart de -0,7% à -1,9% selon le grade)
 
 ### 3.5 Perte attendue et stress test
@@ -111,26 +111,26 @@ EL = PD × LGD × EAD
 calculée prêt par prêt sur le portefeuille test, puis agrégée par segment.
 
 **Stress test** : choc simplifié et différencié sur la PD (non calibré sur une
-récession historique réelle, assumé comme limite) — +3 points pour les grades
+récession historique réelle, assumé comme limite), +3 points pour les grades
 A à C, +7 points pour D-E, +12 points pour F-G, reflétant une sensibilité
 accrue des profils les plus fragiles à une dégradation macroéconomique.
 
 ## 4. Résultats
 
 ### Perte attendue (EL), version finale (EAD par amortissement)
-- **EL de base** : 363 312 095 $ — soit **15,00%** du portefeuille test
+- **EL de base** : 363 312 095 $, soit **15,00%** du portefeuille test
   (2 421 502 464 $)
 - **EL sous stress** : 431 421 960 $ (+18,7%)
 - **Provision supplémentaire nécessaire sous stress** : +2,81% du portefeuille
 
 Un ratio EL/portefeuille de 15% peut sembler élevé comparé à une banque
-généraliste (typiquement 1-3%) — c'est cohérent avec le profil du dataset :
+généraliste (typiquement 1-3%) ce qui est cohérent avec le profil du dataset :
 crédit à la consommation **non garanti** (sans collatéral), avec un taux de
 défaut de base élevé (~20%) et une LGD élevée (~78,6% en moyenne), profil de
 risque nettement supérieur à un portefeuille bancaire diversifié incluant du
 crédit immobilier garanti.
 
-### Backtesting — l'étape de validation la plus importante
+### Backtesting est l'étape de validation la plus importante
 | Version EAD | Écart EL prédite vs perte observée |
 |---|---|
 | V1 (funded_amnt) | +6,6% (surestimation) |
@@ -142,7 +142,7 @@ un résultat solide pour un projet de portfolio. Le passage d'une surestimation
 par amortissement améliore la précision individuelle de l'exposition, mais en
 appliquant un délai moyen de défaut par grade à l'ensemble du portefeuille
 (y compris aux prêts qui ne feront jamais défaut), elle sous-pondère
-systématiquement l'exposition des défauts précoces — qui conservent, au
+systématiquement l'exposition des défauts précoces ce qui conservent, au
 moment de l'incident, un solde restant dû plus élevé que la moyenne du
 segment.
 
@@ -157,7 +157,7 @@ segment.
 | F | 23 618 896 $ | 29 002 715 $ | +22,8% |
 | G | 15 712 788 $ | 19 246 255 $ | +22,5% |
 
-### Recommandations d'octroi — EL/montant prêté vs taux d'intérêt facturé
+### Recommandations d'octroi : EL/montant prêté vs taux d'intérêt facturé
 | Grade | EL/montant | Taux d'intérêt moyen | Marge apparente |
 |---|---|---|---|
 | A | 3,62% | 6,99% | +3,37% |
@@ -169,12 +169,12 @@ segment.
 | G | 35,00% | 30,88% | -4,12% |
 
 **Lecture prudente** : cette "marge apparente" compare un taux d'intérêt
-**annuel** à une perte rapportée au **principal** (non annualisée) — une
+**annuel** à une perte rapportée au **principal** (non annualisée). Une
 simplification pédagogique, pas un calcul de rentabilité réelle (qui
 nécessiterait d'intégrer la durée du prêt, le coût du capital et les coûts
 opérationnels). À ce niveau de lecture simplifié, les grades C à G affichent
 une marge apparente négative, qui s'aggrave nettement sur les grades les plus
-risqués (F, G) — ce sont les premiers segments à surveiller ou à retarifer en
+risqués (F, G). Ce sont les premiers segments à surveiller ou à retarifer en
 cas de dégradation macroéconomique confirmée.
 
 ## 5. Limites et pistes d'amélioration
@@ -183,12 +183,12 @@ cas de dégradation macroéconomique confirmée.
   par Lending Club — aucune information sur les emprunteurs refusés à
   l'octroi.
 - **Censure à droite confirmée empiriquement** : le taux de défaut du jeu de
-  test (2017, 23,13%) est supérieur à celui du train (19,70%) — les prêts
+  test (2017, 23,13%) est supérieur à celui du train (19,70%). Les prêts
   encore en cours au moment de la compilation des données sont exclus,
   alors que les défauts précoces des cohortes récentes ont déjà eu le temps
   d'apparaître.
 - **Modèle LGD au pouvoir explicatif modeste** : même dans sa version
-  enrichie et corrigée du leakage, le pseudo R² reste faible (0,0327) — la
+  enrichie et corrigée du leakage, le pseudo R² reste faible (0,0327). La
   LGD réelle dépend largement de facteurs non observés dans ce dataset
   (comportement de l'emprunteur après le premier impayé, efficacité du
   recouvrement).
