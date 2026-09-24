@@ -1,6 +1,6 @@
 # Projet : Credit Risk Scoring (Lending Club)
 
-Portfolio Analytics Engineer / Data Analyst — Crespino Marius ADJANINYEDO
+Analytics Engineer / Data Analyst / BI - Crespino Marius ADJANINYEDO
 
 ## 1. Contexte et objectif
 
